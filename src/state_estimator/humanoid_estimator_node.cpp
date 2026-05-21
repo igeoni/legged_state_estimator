@@ -16,7 +16,7 @@ HumanoidEstimatorNode::HumanoidEstimatorNode(const rclcpp::NodeOptions& options)
 estimator_(est_params_) {
 
   const std::string urdf_path = declare_parameter<std::string>("urdf_path", "");
-  est_params_.estimator_type  = declare_parameter<std::string>("estimator_type", "fixed_lag_single_bias");
+  est_params_.estimator_type  = declare_parameter<std::string>("estimator_type", "invariant_graph");
   contact_force_threshold_    = declare_parameter<double>("contact_force_threshold", 10.0);
   est_params_.initial_height  = declare_parameter<double>("initial_height", 0.787);
   est_params_.sigma_gyro       = declare_parameter<double>("sigma_gyro", 8e-4);
