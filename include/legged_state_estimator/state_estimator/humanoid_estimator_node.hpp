@@ -15,14 +15,15 @@
 #include <vector>
 
 #include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/string.hpp>
 #include <geometry_msgs/msg/wrench_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 
-#include "legged_state_estimator/fk_provider.hpp"
-#include "legged_state_estimator/humanoid_estimator.hpp"
+#include "legged_state_estimator/kinematics/fk_provider.hpp"
+#include "legged_state_estimator/state_estimator/humanoid_estimator.hpp"
 
 namespace legged_state_estimator {
 
@@ -57,8 +58,7 @@ namespace legged_state_estimator {
  */
 class HumanoidEstimatorNode : public rclcpp::Node {
  public:
-  explicit HumanoidEstimatorNode(
-      const rclcpp::NodeOptions& options = rclcpp::NodeOptions{});
+  explicit HumanoidEstimatorNode(const rclcpp::NodeOptions& options = rclcpp::NodeOptions{});
   ~HumanoidEstimatorNode();
 
  private:
@@ -66,6 +66,7 @@ class HumanoidEstimatorNode : public rclcpp::Node {
   using JointMsg  = sensor_msgs::msg::JointState;
   using WrenchMsg = geometry_msgs::msg::WrenchStamped;
   using OdomMsg   = nav_msgs::msg::Odometry;
+  using StringMsg = std_msgs::msg::String;
 
   struct ImuSample {
     double timestamp_s;
@@ -73,13 +74,13 @@ class HumanoidEstimatorNode : public rclcpp::Node {
     gtsam::Vector3 accel;
   };
 
-  // ── Sensor callbacks (buffer only, never call estimator) ──────────────────
+  //  Sensor callbacks (buffer only, never call estimator) 
   void imuCallback(const ImuMsg::ConstSharedPtr& msg);
   void jointCallback(const JointMsg::ConstSharedPtr& msg);
   void leftContactCallback(const WrenchMsg::ConstSharedPtr& msg);
   void rightContactCallback(const WrenchMsg::ConstSharedPtr& msg);
 
-  // ── Processing thread ─────────────────────────────────────────────────────
+  //  Processing thread 
   void processingLoop();
 
   // Steps called only from processingLoop()
@@ -93,24 +94,26 @@ class HumanoidEstimatorNode : public rclcpp::Node {
                          Eigen::VectorXd& pos) const;
   void buildJointIndexMap(const JointMsg& msg);
 
-  // ── Estimator ─────────────────────────────────────────────────────────────
+  //  Estimator 
   HumanoidEstimatorParams est_params_;
   HumanoidEstimator estimator_;
   std::unique_ptr<FkProvider> fk_provider_;
 
-  // ── ROS I/O ───────────────────────────────────────────────────────────────
+  //  ROS I/O 
   rclcpp::Subscription<ImuMsg>::SharedPtr    imu_sub_;
   rclcpp::Subscription<JointMsg>::SharedPtr  joint_sub_;
   rclcpp::Subscription<WrenchMsg>::SharedPtr left_contact_sub_;
   rclcpp::Subscription<WrenchMsg>::SharedPtr right_contact_sub_;
 
   rclcpp::Publisher<OdomMsg>::SharedPtr odom_pub_;
+  rclcpp::Publisher<StringMsg>::SharedPtr robot_description_pub_;
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+  
 
   std::string world_frame_;
   std::string base_frame_;
 
-  // ── Shared sensor state (guarded by sensor_mutex_) ───────────────────────
+  //  Shared sensor state (guarded by sensor_mutex_) 
   std::mutex              sensor_mutex_;
   std::condition_variable imu_cv_;       // notified when imu_queue_ gets data
   std::deque<ImuSample>   imu_queue_;
@@ -130,7 +133,7 @@ class HumanoidEstimatorNode : public rclcpp::Node {
   std::vector<int> right_joint_idx_;
   bool joint_map_ready_ = false;
 
-  // ── Processing thread state (only accessed from processingLoop()) ─────────
+  //  Processing thread state (only accessed from processingLoop()) 
   std::thread processing_thread_;
   std::atomic<bool> running_{true};
 
@@ -146,6 +149,7 @@ class HumanoidEstimatorNode : public rclcpp::Node {
   bool   disable_contact_       = false;
   bool   zero_accel_debug_      = false;
   bool   zero_gyro_debug_       = false;
+
 };
 
 }  // namespace legged_state_estimator

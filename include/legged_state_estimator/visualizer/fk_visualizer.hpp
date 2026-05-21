@@ -11,7 +11,7 @@
 #include <std_msgs/msg/string.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
-#include "legged_state_estimator/g1_kinematics.hpp"
+#include "legged_state_estimator/kinematics/g1_kinematics.hpp"
 
 namespace legged_state_estimator {
 

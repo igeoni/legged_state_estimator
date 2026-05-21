@@ -1,5 +1,5 @@
 #include <rclcpp/rclcpp.hpp>
-#include "legged_state_estimator/humanoid_estimator_node.hpp"
+#include "legged_state_estimator/state_estimator/humanoid_estimator_node.hpp"
 
 int main(int argc, char* argv[]) {
   rclcpp::init(argc, argv);

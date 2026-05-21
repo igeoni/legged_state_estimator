@@ -1,4 +1,4 @@
-#include "legged_state_estimator/contact_data_collector.hpp"
+#include "legged_state_estimator/data_collector/contact_data_collector.hpp"
 
 namespace legged_state_estimator {
 

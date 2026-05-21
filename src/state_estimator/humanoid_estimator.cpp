@@ -1,4 +1,4 @@
-#include "legged_state_estimator/humanoid_estimator.hpp"
+#include "legged_state_estimator/state_estimator/humanoid_estimator.hpp"
 
 #include <stdexcept>
 
@@ -29,7 +29,15 @@ gtsam::LeggedEstimatorParams HumanoidEstimator::makeGtsamParams(
                      params_.contact_sigma_xy * params_.contact_sigma_xy,
                      params_.contact_sigma_z * params_.contact_sigma_z)
           .asDiagonal();
-  p.useFullContactInitialization = false;  // initial attitude computed from IMU gravity
+  // We compute initial attitude from gravity (R_init) and pass it to initialize(),
+  // so full contact initialization is not needed — footholds are set by the first
+  // normal contact update instead.
+  p.useFullContactInitialization = false;
+
+  // Marginalize foothold when foot lifts off — required for walking.
+  // Without this, stale foothold estimates persist and accumulate drift.
+  p.marginalizeLeavingFoot = params_.marginalize_leaving_foot;
+
   return p;
 }
 
@@ -43,9 +51,7 @@ void HumanoidEstimator::initialize(
       gtsam::Point3(0.0, 0.0, params_.initial_height),
       gtsam::Vector3::Zero());
 
-  // Zero foothold initialization
-  gtsam::Matrix footholds =
-      gtsam::Matrix::Zero(3, static_cast<int>(num_feet));
+  gtsam::Matrix footholds = gtsam::Matrix::Zero(3, static_cast<int>(num_feet));
 
   const gtsam::LeggedEstimatorParams gtsam_params = makeGtsamParams(bias);
 

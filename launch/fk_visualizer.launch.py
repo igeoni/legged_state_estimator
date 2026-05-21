@@ -25,16 +25,6 @@ def generate_launch_description():
             default_value="pelvis",
             description="Root frame for FK marker visualization",
         ),
-        # Publishes TF from the same URDF + /joint_states.
-        # If FK markers match this TF => Pinocchio is correct, Isaac Sim uses a different model.
-        # If FK markers don't match => bug in FK code.
-        # Node(
-        #     package="robot_state_publisher",
-        #     executable="robot_state_publisher",
-        #     name="robot_state_publisher",
-        #     output="screen",
-        #     parameters=[{"robot_description": robot_description}],
-        # ),
         Node(
             package="legged_state_estimator",
             executable="fk_visualizer",

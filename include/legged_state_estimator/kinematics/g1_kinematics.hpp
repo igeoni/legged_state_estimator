@@ -39,12 +39,6 @@ class G1Kinematics {
   pinocchio::Model        model_;
   mutable pinocchio::Data data_;
 
-  // Pelvis COM offset in pelvis link frame (from URDF inertial origin).
-  // Isaac Sim (PhysX) publishes TF at the body COM, not the URDF link origin.
-  // Subtracting this from Pinocchio FK results converts link-origin-relative
-  // positions to COM-relative positions, matching Isaac Sim's TF frames.
-  Eigen::Vector3d root_com_offset_;
-
   // Index into Pinocchio q/v vectors for each of the 6 leg joints
   std::array<int, 6> left_q_idx_,  right_q_idx_;
   std::array<int, 6> left_v_idx_,  right_v_idx_;

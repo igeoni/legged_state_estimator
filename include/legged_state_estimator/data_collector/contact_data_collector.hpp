@@ -11,8 +11,8 @@
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <geometry_msgs/msg/wrench_stamped.hpp>
 
-#include "legged_state_estimator/g1_kinematics.hpp"
-#include "legged_state_estimator/data_buffer.hpp"
+#include "legged_state_estimator/kinematics/g1_kinematics.hpp"
+#include "legged_state_estimator/data_collector/data_buffer.hpp"
 
 namespace legged_state_estimator {
 

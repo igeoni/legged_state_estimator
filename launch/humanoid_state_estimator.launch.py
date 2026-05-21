@@ -4,7 +4,6 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-from launch_ros.descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -62,6 +61,8 @@ def generate_launch_description():
                 "sigma_gyro": 8e-4,
                 "sigma_acc": 2e-2,
                 "lag_seconds": 1.0,
+                "contact_sigma_xy": 0.005,
+                "contact_sigma_z": 0.005,
                 "world_frame": "odom",
                 "base_frame": "base_link",
                 "disable_contact": LaunchConfiguration("disable_contact"),

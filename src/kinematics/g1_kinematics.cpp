@@ -1,4 +1,4 @@
-#include "legged_state_estimator/g1_kinematics.hpp"
+#include "legged_state_estimator/kinematics/g1_kinematics.hpp"
 
 #include <stdexcept>
 
@@ -25,12 +25,6 @@ const std::array<const char*, 6> kRightJointNames = {
 G1Kinematics::G1Kinematics(const std::string& urdf_path) {
   pinocchio::urdf::buildModel(urdf_path, model_);
   data_ = pinocchio::Data(model_);
-
-  // Isaac Sim (PhysX) publishes TF at body COM frames, not URDF link origins.
-  // model_.inertias[0] holds the root body (pelvis) inertia; lever() is its COM
-  // in the pelvis link frame. Subtracting this from FK positions converts from
-  // pelvis-link-origin frame to pelvis-COM frame, matching Isaac Sim's TF.
-  root_com_offset_ = model_.inertias[0].lever();
 
   // Map joint names to q/v indices in the Pinocchio configuration vector
   for (int i = 0; i < 6; ++i) {

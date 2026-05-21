@@ -1,5 +1,5 @@
 // Translation unit: GTSAM + ROS2 — NO pinocchio headers.
-#include "legged_state_estimator/humanoid_estimator_node.hpp"
+#include "legged_state_estimator/state_estimator/humanoid_estimator_node.hpp"
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <algorithm>
@@ -12,17 +12,18 @@ namespace legged_state_estimator {
 // Constructor / Destructor
 // ---------------------------------------------------------------------------
 
-HumanoidEstimatorNode::HumanoidEstimatorNode(const rclcpp::NodeOptions& options)
-    : rclcpp::Node("humanoid_state_estimator", options),
-      estimator_(est_params_) {
+HumanoidEstimatorNode::HumanoidEstimatorNode(const rclcpp::NodeOptions& options):rclcpp::Node("humanoid_state_estimator", options),
+estimator_(est_params_) {
 
   const std::string urdf_path = declare_parameter<std::string>("urdf_path", "");
   est_params_.estimator_type  = declare_parameter<std::string>("estimator_type", "fixed_lag_single_bias");
   contact_force_threshold_    = declare_parameter<double>("contact_force_threshold", 10.0);
   est_params_.initial_height  = declare_parameter<double>("initial_height", 0.787);
-  est_params_.sigma_gyro  = declare_parameter<double>("sigma_gyro", 8e-4);
-  est_params_.sigma_acc   = declare_parameter<double>("sigma_acc",  2e-2);
-  est_params_.lag_seconds = declare_parameter<double>("lag_seconds", 1.0);
+  est_params_.sigma_gyro       = declare_parameter<double>("sigma_gyro", 8e-4);
+  est_params_.sigma_acc        = declare_parameter<double>("sigma_acc",  2e-2);
+  est_params_.lag_seconds      = declare_parameter<double>("lag_seconds", 1.0);
+  est_params_.contact_sigma_xy = declare_parameter<double>("contact_sigma_xy", 0.005);
+  est_params_.contact_sigma_z  = declare_parameter<double>("contact_sigma_z",  0.005);
   max_dead_reckoning_s_   = declare_parameter<double>("max_dead_reckoning_s", 0.1);
   disable_contact_        = declare_parameter<bool>("disable_contact", false);
   zero_accel_debug_       = declare_parameter<bool>("zero_accel_debug", false);
@@ -53,13 +54,31 @@ HumanoidEstimatorNode::HumanoidEstimatorNode(const rclcpp::NodeOptions& options)
   left_joint_idx_.assign(6, -1);
   right_joint_idx_.assign(6, -1);
 
+  // Subscriptions
   imu_sub_ = create_subscription<ImuMsg>("/imu", rclcpp::SensorDataQoS(), [this](const ImuMsg::ConstSharedPtr& m) { imuCallback(m); });
   joint_sub_ = create_subscription<JointMsg>("/joint_states", rclcpp::SensorDataQoS(), [this](const JointMsg::ConstSharedPtr& m) { jointCallback(m); });
   left_contact_sub_ = create_subscription<WrenchMsg>("/contact/left_foot", rclcpp::SensorDataQoS(), [this](const WrenchMsg::ConstSharedPtr& m) { leftContactCallback(m); });
   right_contact_sub_ = create_subscription<WrenchMsg>("/contact/right_foot", rclcpp::SensorDataQoS(), [this](const WrenchMsg::ConstSharedPtr& m) { rightContactCallback(m); });
 
+  // Publications
+  auto qos_latched = rclcpp::QoS(1).transient_local(); // trainsent_local: 발행자가 종료되지 않는 한 늦게 연결된 subscriber에게 마지막 메시지를 전달
+
   odom_pub_ = create_publisher<OdomMsg>("/state_estimator/odom", 10);
+  robot_description_pub_ = create_publisher<StringMsg>("/description", qos_latched);
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
+
+  // description publisher
+  std::ifstream urdf_file(urdf_path);
+  if (!urdf_file.is_open()) {
+    RCLCPP_ERROR(get_logger(), "Cannot open URDF file for publishing: %s", urdf_path.c_str());
+  }
+  else {
+    std::ostringstream ss;
+    ss << urdf_file.rdbuf();
+    StringMsg msg;
+    msg.data = ss.str();
+    robot_description_pub_ -> publish(msg);
+  }
 
   processing_thread_ = std::thread(&HumanoidEstimatorNode::processingLoop, this);
 
@@ -221,8 +240,7 @@ bool HumanoidEstimatorNode::tryInitializeBias(const ImuSample& s) {
   // specific force at rest = R_body_world^T * (-g), so mean_accel ≈ R^T * (0,0,9.81).
   // Use Eigen's quaternion alignment: find minimum-rotation R s.t. R * mean_accel = g_up.
   const gtsam::Vector3 g_up(0.0, 0.0, est_params_.gravity.norm());  // (0,0,9.81)
-  const Eigen::Quaterniond q_align =
-      Eigen::Quaterniond::FromTwoVectors(mean_accel, g_up);
+  const Eigen::Quaterniond q_align = Eigen::Quaterniond::FromTwoVectors(mean_accel, g_up);
   const gtsam::Rot3 R_init = gtsam::Rot3(q_align.toRotationMatrix());
 
   // Bias = measured - expected_in_body_frame (gyro bias = mean gyro at rest)
@@ -378,7 +396,7 @@ void HumanoidEstimatorNode::publishOdom(double timestamp_s) {
   OdomMsg odom;
   odom.header.stamp    = stamp;
   odom.header.frame_id = world_frame_;
-  odom.child_frame_id  = base_frame_;
+  odom.child_frame_id  = "pelvis";
   odom.pose.pose.position.x    = p.x();
   odom.pose.pose.position.y    = p.y();
   odom.pose.pose.position.z    = p.z();
@@ -417,8 +435,7 @@ void HumanoidEstimatorNode::publishOdom(double timestamp_s) {
 
 void HumanoidEstimatorNode::buildJointIndexMap(const JointMsg& msg) {
   auto lookup = [&](const std::string& name) -> int {
-    const auto it =
-        std::find(msg.name.begin(), msg.name.end(), name);
+    const auto it = std::find(msg.name.begin(), msg.name.end(), name);
     return it != msg.name.end()
                ? static_cast<int>(it - msg.name.begin())
                : -1;

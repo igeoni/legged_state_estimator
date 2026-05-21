@@ -1,4 +1,4 @@
-#include "legged_state_estimator/npy_writer.hpp"
+#include "legged_state_estimator/data_collector/npy_writer.hpp"
 
 #include <fstream>
 #include <sstream>

@@ -1,5 +1,5 @@
 #include <rclcpp/rclcpp.hpp>
-#include "legged_state_estimator/contact_data_collector.hpp"
+#include "legged_state_estimator/data_collector/contact_data_collector.hpp"
 
 int main(int argc, char* argv[]) {
   rclcpp::init(argc, argv);

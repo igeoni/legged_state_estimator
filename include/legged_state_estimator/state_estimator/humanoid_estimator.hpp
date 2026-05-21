@@ -23,9 +23,16 @@ struct HumanoidEstimatorParams {
   double bias_acc_rw = 5e-3;
   double bias_omega_rw = 1e-4;
 
-  // Contact noise
-  double contact_sigma_xy = 0.03;
-  double contact_sigma_z = 0.02;
+  // Contact noise — tight sigma is critical: with loose sigma the contact
+  // factor is too weak to suppress IMU velocity drift during stance.
+  // Rule of thumb: sigma ≈ FK noise floor (ankle encoder + URDF error ~5mm).
+  double contact_sigma_xy = 0.005;
+  double contact_sigma_z  = 0.005;
+
+  // Marginalize leaving foot: remove foothold from state when foot lifts off.
+  // Must be true for walking — otherwise old foothold estimate persists and
+  // corrupts the next touchdown initialization.
+  bool marginalize_leaving_foot = true;
 
   // Initial state
   double initial_height = 0.787;  // G1 standing height (pelvis COM above ground)

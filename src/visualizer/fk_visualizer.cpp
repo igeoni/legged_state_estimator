@@ -1,4 +1,4 @@
-#include "legged_state_estimator/fk_visualizer.hpp"
+#include "legged_state_estimator/visualizer/fk_visualizer.hpp"
 
 #include <fstream>
 #include <sstream>
@@ -33,7 +33,8 @@ FkVisualizer::FkVisualizer(const rclcpp::NodeOptions& options): rclcpp::Node("fk
   std::ifstream urdf_file(urdf_path);
   if (!urdf_file.is_open()) {
     RCLCPP_ERROR(get_logger(), "Cannot open URDF file for publishing: %s", urdf_path.c_str());
-  } else {
+  } 
+  else {
     std::ostringstream ss;
     ss << urdf_file.rdbuf();
     StringMsg msg;

@@ -28,10 +28,10 @@ find_package(GTSAM REQUIRED HINTS /usr/local/lib/cmake)
 # ---------------------------------------------------------------------------
 
 set(CONTACT_COLLECTOR_SOURCES
-  src/g1_kinematics.cpp
-  src/npy_writer.cpp
-  src/data_buffer.cpp
-  src/contact_data_collector.cpp
+  src/kinematics/g1_kinematics.cpp
+  src/data_collector/npy_writer.cpp
+  src/data_collector/data_buffer.cpp
+  src/data_collector/contact_data_collector.cpp
 )
 
 add_library(contact_collector_lib STATIC ${CONTACT_COLLECTOR_SOURCES})
@@ -58,7 +58,7 @@ target_link_libraries(contact_collector_lib
 # ---------------------------------------------------------------------------
 
 add_executable(contact_data_collector
-  src/contact_data_collector_main.cpp
+  src/data_collector/contact_data_collector_main.cpp
 )
 
 target_link_libraries(contact_data_collector contact_collector_lib)
@@ -76,9 +76,9 @@ ament_target_dependencies(contact_data_collector
 # ---------------------------------------------------------------------------
 
 add_executable(fk_visualizer
-  src/fk_visualizer.cpp
-  src/fk_visualizer_main.cpp
-  src/g1_kinematics.cpp
+  src/visualizer/fk_visualizer.cpp
+  src/visualizer/fk_visualizer_main.cpp
+  src/kinematics/g1_kinematics.cpp
 )
 
 target_include_directories(fk_visualizer PUBLIC
@@ -111,8 +111,8 @@ target_link_libraries(fk_visualizer
 
 # FK lib: pinocchio TU — must NOT link gtsam
 add_library(humanoid_fk_lib STATIC
-  src/g1_kinematics.cpp
-  src/g1_fk_provider.cpp
+  src/kinematics/g1_kinematics.cpp
+  src/kinematics/g1_fk_provider.cpp
 )
 
 target_include_directories(humanoid_fk_lib PUBLIC
@@ -130,8 +130,8 @@ target_link_libraries(humanoid_fk_lib
 
 # Estimator lib: GTSAM + ROS2 TU — must NOT include pinocchio headers
 add_library(humanoid_est_lib STATIC
-  src/humanoid_estimator.cpp
-  src/humanoid_estimator_node.cpp
+  src/state_estimator/humanoid_estimator.cpp
+  src/state_estimator/humanoid_estimator_node.cpp
 )
 
 target_include_directories(humanoid_est_lib PUBLIC
@@ -155,7 +155,7 @@ target_link_libraries(humanoid_est_lib
 )
 
 add_executable(humanoid_state_estimator
-  src/humanoid_estimator_main.cpp
+  src/state_estimator/humanoid_estimator_main.cpp
 )
 
 target_link_libraries(humanoid_state_estimator

@@ -1,6 +1,6 @@
 // Translation unit: pinocchio only — NO GTSAM headers.
-#include "legged_state_estimator/fk_provider.hpp"
-#include "legged_state_estimator/g1_kinematics.hpp"
+#include "legged_state_estimator/kinematics/fk_provider.hpp"
+#include "legged_state_estimator/kinematics/g1_kinematics.hpp"
 
 namespace legged_state_estimator {
 
