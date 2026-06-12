@@ -2,7 +2,6 @@
 
 A ROS2-based state estimator for humanoid robots, developed and tested on the **Unitree G1**. It estimates the robot's base pose and velocity by fusing IMU preintegration, forward kinematics, and foot contact constraints via a GTSAM fixed-lag smoother.
 
-Developed at **LAIR Lab (Laboratory of Artificial Intelligence & Robotics), Sungkyunkwan University (SKKU)**.
 
 ## Requirements
 
