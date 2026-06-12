@@ -1,7 +1,8 @@
 # legged_state_estimator
 
-A ROS2 package for real-time state estimation of legged robots (humanoids). It fuses IMU measurements, joint kinematics, and foot contact forces using factor graph optimization (GTSAM Fixed-Lag Smoother) to estimate the robot's base pose, velocity, and IMU bias.
+A ROS2-based state estimator for humanoid robots, developed and tested on the **Unitree G1**. It estimates the robot's base pose and velocity by fusing IMU preintegration, forward kinematics, and foot contact constraints via a GTSAM fixed-lag smoother.
 
+Developed at **LAIR Lab (Laboratory of Artificial Intelligence & Robotics), Sungkyunkwan University (SKKU)**.
 
 ## Requirements
 
@@ -15,10 +16,12 @@ A ROS2 package for real-time state estimation of legged robots (humanoids). It f
 ```bash
 git clone https://github.com/borglab/gtsam.git
 cd gtsam
-mkdir build && cd build
-cmake .. -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF
-make -j$(nproc)
-sudo make install
+#!bash
+mkdir build
+cd build
+cmake ..
+make check  # optional, runs all unit tests
+make install
 ```
 
 ## Build
