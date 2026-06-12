@@ -35,8 +35,6 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "estimator_type",
             default_value="invariant_graph",
-            description="Estimator variant: invariant_ekf | invariant_graph | "
-                        "fixed_lag_single_bias | fixed_lag_combined_bias",
         ),
         DeclareLaunchArgument(
             "disable_contact",
@@ -60,22 +58,16 @@ def generate_launch_description():
             output="screen",
             arguments=["--ros-args", "--log-level",
                        LaunchConfiguration("log_level")],
-            parameters=[{
-                "urdf_path": urdf_path,
-                "estimator_type": estimator_type,
-                "contact_force_threshold": 10.0,
-                "initial_height": 0.787,
-                "sigma_gyro": 8e-4,  # 8e-4
-                "sigma_acc": 2e-2,   # 2e-2
-                "lag_seconds": 1.0,
-                "contact_sigma_xy": 0.005,
-                "contact_sigma_z": 0.005,
-                "world_frame": "odom",
-                "base_frame": "base_link",
-                "disable_contact": LaunchConfiguration("disable_contact"),
-                "zero_accel_debug": LaunchConfiguration("zero_accel_debug"),
-                "zero_gyro_debug": LaunchConfiguration("zero_gyro_debug"),
-            }],
+            parameters=[
+                os.path.join(pkg_share, "config", "humanoid_estimator.yaml"),
+                {
+                    "urdf_path": urdf_path,
+                    "estimator_type": estimator_type,
+                    "disable_contact": LaunchConfiguration("disable_contact"),
+                    "zero_accel_debug": LaunchConfiguration("zero_accel_debug"),
+                    "zero_gyro_debug": LaunchConfiguration("zero_gyro_debug"),
+                },
+            ],
         ),
         Node(
             package="rviz2",

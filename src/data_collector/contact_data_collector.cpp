@@ -182,9 +182,7 @@ void ContactDataCollector::buildJointIndexMap(const JointMsg& msg) {
   RCLCPP_INFO(get_logger(), "Joint index map built successfully.");
 }
 
-bool ContactDataCollector::extractLegJoints(const JointMsg& msg,
-                                            std::vector<double>& pos,
-                                            std::vector<double>& vel) {
+bool ContactDataCollector::extractLegJoints(const JointMsg& msg, std::vector<double>& pos, std::vector<double>& vel) {
   for (std::size_t i = 0; i < kLegJointNames.size(); ++i) {
     auto it = joint_index_map_.find(kLegJointNames[i]);
     if (it == joint_index_map_.end()) return false;

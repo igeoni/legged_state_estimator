@@ -1,3 +1,15 @@
+/*
+ * Copyright (c) 2026, Geoni Lee, LAIR Lab, Sungkyunkwan University (SKKU)
+ * All Rights Reserved
+ *
+ * This file is licensed under the BSD-3-Clause License.
+ * This work builds upon GTSAM (Georgia Tech Smoothing and Mapping library),
+ * developed at Georgia Tech Research Corporation. GTSAM is distributed under
+ * its own BSD license; see https://github.com/borglab/gtsam for details.
+ *
+ * See LICENSE for the license information applicable to this file.
+ */
+
 #include "legged_state_estimator/visualizer/fk_visualizer.hpp"
 
 #include <fstream>
@@ -43,16 +55,13 @@ FkVisualizer::FkVisualizer(const rclcpp::NodeOptions& options): rclcpp::Node("fk
     RCLCPP_INFO(get_logger(), "Published /robot_description (%zu bytes)", msg.data.size());
   }
 
-  joint_sub_ = create_subscription<JointMsg>(
-      "/joint_states", 50,
-      std::bind(&FkVisualizer::jointCallback, this, std::placeholders::_1));
-
+  joint_sub_ = create_subscription<JointMsg>("/joint_states", 50, std::bind(&FkVisualizer::jointCallback, this, std::placeholders::_1));
   marker_pub_ = create_publisher<MarkerArray>("/fk_markers", 10);
 
   RCLCPP_INFO(get_logger(), "FkVisualizer started. base_frame='%s'", base_frame_.c_str());
 }
 
-// ---------------------------------------------------------------------------
+// Callback
 
 void FkVisualizer::jointCallback(const JointMsg::ConstSharedPtr& msg) {
   if (!joint_map_ready_) {

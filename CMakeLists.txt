@@ -97,19 +97,7 @@ target_link_libraries(fk_visualizer
   pinocchio::pinocchio
 )
 
-# ---------------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------
-# humanoid_state_estimator executable
-#
-# Split into two static libs to avoid the Boost-serialization conflict
-# between pinocchio (ROS2 humble) and GTSAM when compiled in the same TU:
-#
-#   humanoid_fk_lib   — pinocchio only (g1_kinematics + g1_fk_provider)
-#   humanoid_est_lib  — GTSAM + ROS2 (estimator + node)
-# ---------------------------------------------------------------------------
-
-# FK lib: pinocchio TU — must NOT link gtsam
 add_library(humanoid_fk_lib STATIC
   src/kinematics/g1_kinematics.cpp
   src/kinematics/g1_fk_provider.cpp
@@ -145,6 +133,7 @@ ament_target_dependencies(humanoid_est_lib
   sensor_msgs
   geometry_msgs
   nav_msgs
+  visualization_msgs
   tf2
   tf2_ros
   Eigen3
@@ -180,6 +169,10 @@ install(DIRECTORY description/
 
 install(DIRECTORY launch/
   DESTINATION share/${PROJECT_NAME}/launch
+)
+
+install(DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config
 )
 
 install(DIRECTORY rviz/

@@ -35,7 +35,7 @@ struct HumanoidEstimatorParams {
   bool marginalize_leaving_foot = true;
 
   // Initial state
-  double initial_height = 0.787;  // G1 standing height (pelvis COM above ground)
+  double initial_height = 0.787;  // G1 standing height 
 
   // Fixed-lag smoother lag window
   double lag_seconds = 1.0;
@@ -55,13 +55,13 @@ struct HumanoidEstimatorParams {
 };
 
 /**
- * Wraps gtsam::LeggedEstimator for real-time use.
+ * gtsam::LeggedEstimator for real-time use.
  *
  * Call sequence each control cycle:
- *   1. predict(omega, accel, dt)         — after each IMU sample
- *   2. processContacts(measurements)     — when contact state changes or
+ *   1. predict(omega, accel, dt)         -> after each IMU sample
+ *   2. processContacts(measurements)     -> when contact state changes or
  *                                          periodically (touchdowns + updates)
- *   3. navState() / position() / ...     — read current estimate
+ *   3. navState() / position() / ...     -> read current estimate
  */
 class HumanoidEstimator {
  public:
@@ -71,13 +71,12 @@ class HumanoidEstimator {
   void initialize(const gtsam::imuBias::ConstantBias& bias,
                   const gtsam::Rot3& initial_attitude = gtsam::Rot3());
 
-  // Propagate with one IMU measurement [rad/s, m/s^2]
+  // Propagate with one IMU measurement 
   void predict(const gtsam::Vector3& omega, const gtsam::Vector3& accel,
                double dt);
 
   // Process currently active foot contacts; measurements in body (pelvis) frame
-  void processContacts(
-      const std::vector<gtsam::ContactMeasurement>& active_contacts);
+  void processContacts(const std::vector<gtsam::ContactMeasurement>& active_contacts);
 
   // Query current estimate
   gtsam::NavState navState() const;
@@ -96,4 +95,4 @@ class HumanoidEstimator {
       const gtsam::imuBias::ConstantBias& bias) const;
 };
 
-}  // namespace legged_state_estimator
+} 

@@ -1,0 +1,25 @@
+humanoid_state_estimator:
+  ros__parameters:
+    contact_force_threshold: 10.0   # contact force threshold for contact detection [N]
+    initial_height: 0.787           # initial height of the base above the ground [m]
+    sigma_gyro: 8.0e-4              # imu gyro noise rad/s
+    sigma_acc: 5.0e-2               # imu accel noise m/s^2
+    sigma_integration: 1.0e-3       # preintegration error 
+    bias_acc_rw: 2.0e-3             # accelerometer bias 
+    lag_seconds: 0.5                # fixed-lag smoother window size
+    contact_sigma_xy: 0.005         # foot contact x,y position measurement noise 
+    contact_sigma_z: 0.005          # foot contact height measurement noise
+    max_dead_reckoning_s: 0.02      # max time to trust dead reckoning when no contact is available
+    world_frame: "odom"             # world frame for state estimation
+    base_frame: "pelvis"            # base frame for state estimation
+    qos.reorder_delay_seconds: 0.02 # reorder delay for sensor messages to ensure correct temporal ordering (especially for IMU)
+
+    # topic names
+    topic.imu:               "/imu"                           # imu ImuMsg
+    topic.joint_states:      "/joint_states"                  # joint state JointMsg
+    topic.contact_left:      "/contact/left_foot"             # contact state WrenchMsg
+    topic.contact_right:     "/contact/right_foot"            # contact state WrenchMsg 
+    topic.odom:              "/state_estimator/odom"          # odometry output OdometryMsg
+    topic.robot_description: "/description"                   # robot description StringMsg (URDF)
+    topic.path:              "/state_estimator/path"          # path output PathMsg
+    topic.foot_contacts:     "/state_estimator/foot_contacts" # foot contact state output ContactStateArrayMsg

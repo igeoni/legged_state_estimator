@@ -65,10 +65,8 @@ void DataBuffer::saveSplit(const std::string& prefix,
     label_out.push_back(labels_[idx]);
   }
 
-  NpyWriter::saveFloat32(output_dir_ + "/" + prefix + ".npy",
-                         feat_out, n, kFeatureDim);
-  NpyWriter::saveInt32  (output_dir_ + "/" + prefix + "_label.npy",
-                         label_out, n);
+  NpyWriter::saveFloat32(output_dir_ + "/" + prefix + ".npy", feat_out, n, kFeatureDim);
+  NpyWriter::saveInt32  (output_dir_ + "/" + prefix + "_label.npy", label_out, n);
 }
 
 }  // namespace legged_state_estimator

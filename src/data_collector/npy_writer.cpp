@@ -12,11 +12,8 @@ static const char kMagic[]   = "\x93NUMPY";
 static const char kVersion[] = "\x01\x00";
 
 // Write header block padded to a multiple of 64 bytes (NPY v1.0 spec).
-void NpyWriter::writeHeader(std::ostream& out,
-                            const std::string& dtype_str,
-                            const std::string& shape_str) {
-  std::string dict = "{'descr': '" + dtype_str +
-                     "', 'fortran_order': False, 'shape': (" + shape_str + "), }";
+void NpyWriter::writeHeader(std::ostream& out, const std::string& dtype_str, const std::string& shape_str) {
+  std::string dict = "{'descr': '" + dtype_str + "', 'fortran_order': False, 'shape': (" + shape_str + "), }";
 
   // Preamble = 6 (magic) + 2 (version) + 2 (HEADER_LEN) = 10 bytes
   constexpr std::size_t preamble = 10;
@@ -36,10 +33,7 @@ void NpyWriter::writeHeader(std::ostream& out,
   out.write(dict.c_str(), dict.size());
 }
 
-void NpyWriter::saveFloat32(const std::string& path,
-                            const std::vector<float>& data,
-                            std::size_t rows,
-                            std::size_t cols) {
+void NpyWriter::saveFloat32(const std::string& path, const std::vector<float>& data, std::size_t rows, std::size_t cols) {
   if (data.size() != rows * cols) {
     throw std::runtime_error("NpyWriter: data.size() != rows * cols");
   }
@@ -52,13 +46,10 @@ void NpyWriter::saveFloat32(const std::string& path,
   std::string shape_str = std::to_string(rows) + ", " + std::to_string(cols);
   writeHeader(file, "<f4", shape_str);
 
-  file.write(reinterpret_cast<const char*>(data.data()),
-             static_cast<std::streamsize>(data.size() * sizeof(float)));
+  file.write(reinterpret_cast<const char*>(data.data()), static_cast<std::streamsize>(data.size() * sizeof(float)));
 }
 
-void NpyWriter::saveInt32(const std::string& path,
-                          const std::vector<int32_t>& data,
-                          std::size_t rows) {
+void NpyWriter::saveInt32(const std::string& path, const std::vector<int32_t>& data, std::size_t rows) {
   if (data.size() != rows) {
     throw std::runtime_error("NpyWriter: data.size() != rows");
   }
