@@ -55,7 +55,7 @@ ros2 launch legged_state_estimator humanoid_state_estimator.launch.py
 |-------|------|-------------|
 | `/state_estimator/odom` | `nav_msgs/Odometry` | Estimated base odometry |
 | `/state_estimator/path` | `nav_msgs/Path` | Estimated base path |
-| `/state_estimator/foot_contacts` | `ContactStateArray` | Foot contact states |
+| `/state_estimator/foot_contacts` | `MarkerArray` | Foot contact states |
 
 ## License
 
