@@ -2,6 +2,8 @@
 
 A ROS2-based state estimator for humanoid robots, developed and tested on the **Unitree G1**. It estimates the robot's base pose and velocity by fusing IMU preintegration, forward kinematics, and foot contact constraints via a GTSAM fixed-lag smoother.
 
+## MuJoCo Test Video
+https://github.com/user-attachments/assets/8c50932e-77e3-4db2-8c14-0e8db6635fda
 
 ## Requirements
 
