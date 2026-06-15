@@ -393,6 +393,7 @@ void HumanoidEstimatorNode::predictHeld(double dt) {
 // ---------------------------------------------------------------------------
 
 void HumanoidEstimatorNode::runContactUpdate(double now, bool left_td, bool right_td, bool left_c,  bool right_c) {
+  // Find the timestamp closest to now amont the joint_states in the joint_queue_.
   JointMsg::ConstSharedPtr joint_snap;
   {
     std::lock_guard<std::mutex> lk(sensor_mutex_);
@@ -428,6 +429,7 @@ void HumanoidEstimatorNode::runContactUpdate(double now, bool left_td, bool righ
   bool left_fk_ok  = false;
   bool right_fk_ok = false;
 
+  // body frame foot positions from FK are used for contact updates.
   if (left_c && extractLegJoints(*joint_snap, true, q)) {
     const Eigen::Vector3d fp = fk_provider_->footPosition(q, true);
     left_body_fp = {fp.x(), fp.y(), fp.z()};
@@ -450,13 +452,13 @@ void HumanoidEstimatorNode::runContactUpdate(double now, bool left_td, bool righ
 
   RCLCPP_DEBUG(get_logger(), "[contact] joint_dt=%.4fs  left=%d(td=%d) right=%d(td=%d)", joint_dt, left_c, left_td, right_c, right_td);
 
-  const gtsam::Point3 pos_before = estimator_.position();
-  estimator_.processContacts(contacts);
+  const gtsam::Point3 pos_before = estimator_.position();   // DEBUG: 
+  estimator_.processContacts(contacts); // Optimizer update using contact measurements
   const gtsam::Point3 delta = estimator_.position() - pos_before;
 
   RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "[contact] t=%.3f delta=[%.4f %.4f %.4f]", now, delta.x(), delta.y(), delta.z());
 
-  // Publish foot contact markers on touchdown
+  // Publish foot contact markers on touchdown (Visualization) 
   if ((left_td && left_fk_ok) || (right_td && right_fk_ok)) {
     const gtsam::Pose3 T_wb = estimator_.navState().pose();
     const double sec_floor = std::floor(now);
