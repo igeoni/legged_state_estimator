@@ -51,7 +51,7 @@ struct HumanoidEstimatorParams {
 
   // Estimator variant: "invariant_ekf", "invariant_graph",
   //                    "fixed_lag_single_bias", "fixed_lag_combined_bias"
-  std::string estimator_type = "invariant_ekf";
+  std::string estimator_type = "invariant_graph";
 };
 
 /**

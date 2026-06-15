@@ -211,6 +211,9 @@ class HumanoidEstimatorNode : public rclcpp::Node {
   bool   disable_contact_       = false;
   bool   zero_accel_debug_      = false;
   bool   zero_gyro_debug_       = false;
+
+  std::chrono::steady_clock::time_point start_time_;
+  
 };
 
 }  

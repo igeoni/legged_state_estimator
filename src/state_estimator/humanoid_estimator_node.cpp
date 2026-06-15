@@ -46,7 +46,7 @@ HumanoidEstimatorNode::HumanoidEstimatorNode(const rclcpp::NodeOptions& options)
   world_frame_                  = declare_parameter<std::string>("world_frame", "odom");
   base_frame_                   = declare_parameter<std::string>("base_frame",  "pelvis");
 
-  const std::string topic_imu           = declare_parameter<std::string>("topic.imu",               "/imu");
+  const std::string topic_imu           = declare_parameter<std::string>("topic.imu",                "/imu");
   const std::string topic_joint         = declare_parameter<std::string>("topic.joint_states",       "/joint_states");
   const std::string topic_contact_left  = declare_parameter<std::string>("topic.contact_left",       "/contact/left_foot");
   const std::string topic_contact_right = declare_parameter<std::string>("topic.contact_right",      "/contact/right_foot");
@@ -106,8 +106,8 @@ HumanoidEstimatorNode::HumanoidEstimatorNode(const rclcpp::NodeOptions& options)
     RCLCPP_ERROR(get_logger(), "Cannot open URDF for publishing: %s", urdf_path.c_str());
   }
 
-  flushTimer_ = create_wall_timer(
-      std::chrono::milliseconds(10), [this]() { flushReadyEvents(); });
+  // Start the flush timer after all subscriptions are set up
+  flushTimer_ = create_wall_timer(std::chrono::milliseconds(10), [this]() { flushReadyEvents(); });
 
   RCLCPP_INFO(get_logger(),
               "[init] estimator=%s  dead_reckoning=%.3fs  lag=%.2fs  reorder=%.3fs",
@@ -201,8 +201,7 @@ void HumanoidEstimatorNode::jointCallback(const JointMsg::ConstSharedPtr& msg) {
   if (!joint_map_ready_) buildJointIndexMap(*msg);
   joint_queue_.push_back(msg);
   const double cutoff = rclcpp::Time(msg->header.stamp).seconds() - kJointBufferSecs;
-  while (!joint_queue_.empty() &&
-         rclcpp::Time(joint_queue_.front()->header.stamp).seconds() < cutoff) {
+  while (!joint_queue_.empty() && rclcpp::Time(joint_queue_.front()->header.stamp).seconds() < cutoff) {
     joint_queue_.pop_front();
   }
 }
@@ -210,16 +209,16 @@ void HumanoidEstimatorNode::jointCallback(const JointMsg::ConstSharedPtr& msg) {
 void HumanoidEstimatorNode::leftContactCallback(const WrenchMsg::ConstSharedPtr& msg) {
   const bool in_contact = msg->wrench.force.z > contact_force_threshold_;
   LiveEvent event;
-  event.type       = LiveEvent::Type::kContact;
+  event.type = LiveEvent::Type::kContact;
   event.timestampS = rclcpp::Time(msg->header.stamp).seconds();
   {
     std::lock_guard<std::mutex> lk(sensor_mutex_);
-    event.contact.left_touchdown  = in_contact && !left_in_contact_;
-    left_in_contact_              = in_contact;
-    event.contact.left_in_contact  = in_contact;
+    event.contact.left_touchdown = in_contact && !left_in_contact_;
+    left_in_contact_ = in_contact;
+    event.contact.left_in_contact = in_contact;
     event.contact.right_in_contact = right_in_contact_;
   }
-  event.contact.timestamp_s    = event.timestampS;
+  event.contact.timestamp_s = event.timestampS;
   event.contact.right_touchdown = false;
   enqueueEvent(std::move(event));
 }
@@ -227,16 +226,16 @@ void HumanoidEstimatorNode::leftContactCallback(const WrenchMsg::ConstSharedPtr&
 void HumanoidEstimatorNode::rightContactCallback(const WrenchMsg::ConstSharedPtr& msg) {
   const bool in_contact = msg->wrench.force.z > contact_force_threshold_;
   LiveEvent event;
-  event.type       = LiveEvent::Type::kContact;
+  event.type = LiveEvent::Type::kContact;
   event.timestampS = rclcpp::Time(msg->header.stamp).seconds();
   {
     std::lock_guard<std::mutex> lk(sensor_mutex_);
-    event.contact.right_touchdown  = in_contact && !right_in_contact_;
-    right_in_contact_              = in_contact;
-    event.contact.left_in_contact  = left_in_contact_;
+    event.contact.right_touchdown = in_contact && !right_in_contact_;
+    right_in_contact_ = in_contact;
+    event.contact.left_in_contact = left_in_contact_;
     event.contact.right_in_contact = in_contact;
   }
-  event.contact.timestamp_s   = event.timestampS;
+  event.contact.timestamp_s = event.timestampS;
   event.contact.left_touchdown = false;
   enqueueEvent(std::move(event));
 }
@@ -247,9 +246,9 @@ void HumanoidEstimatorNode::rightContactCallback(const WrenchMsg::ConstSharedPtr
 
 void HumanoidEstimatorNode::enqueueEvent(LiveEvent event) {
   std::lock_guard<std::mutex> lock(queueMutex_);
-  event.sequence = nextSequence_++;
-  latestQueuedTimestampS_ = std::max(latestQueuedTimestampS_, event.timestampS);
-  const int priority = (event.type == LiveEvent::Type::kImu) ? 0 : 1;
+  event.sequence = nextSequence_++;  // sequence numbers ensure FIFO order for events with identical timestamps
+  latestQueuedTimestampS_ = std::max(latestQueuedTimestampS_, event.timestampS); // record the latest timestamp 
+  const int priority = (event.type == LiveEvent::Type::kImu) ? 0 : 1;            // priority IMU is processed before contact at the same timestamp
   eventQueue_.push(QueuedEvent{event.timestampS, priority, event.sequence, std::move(event)});
 }
 
@@ -258,16 +257,19 @@ void HumanoidEstimatorNode::enqueueEvent(LiveEvent event) {
 // ---------------------------------------------------------------------------
 
 void HumanoidEstimatorNode::flushReadyEvents() {
+  start_time_ = std::chrono::steady_clock::now();
+
   std::vector<LiveEvent> ready;
   {
     std::lock_guard<std::mutex> lock(queueMutex_);
+    // Wait for late arriving events 
     const double cutoff = latestQueuedTimestampS_ - reorderDelaySeconds_;
     while (!eventQueue_.empty() && eventQueue_.top().timestampS <= cutoff) {
       ready.push_back(eventQueue_.top().event);
       eventQueue_.pop();
     }
   }
-  for (LiveEvent& event : ready) {
+  for (LiveEvent& event : ready) { // Drops events with reversed timestamps
     if (event.timestampS < lastDispatchedTimestampS_ - 1e-9) {
       RCLCPP_WARN(get_logger(), "Dropping out-of-order event at %.9f", event.timestampS);
       continue;
@@ -275,6 +277,9 @@ void HumanoidEstimatorNode::flushReadyEvents() {
     lastDispatchedTimestampS_ = event.timestampS;
     handleOrderedEvent(std::move(event));
   }
+  const auto end_time_ = std::chrono::steady_clock::now();
+  const double wall_time_ms = std::chrono::duration<double, std::milli>(end_time_ - start_time_).count();
+  // RCLCPP_INFO(get_logger(), "wall_time=%.3fms", wall_time_ms); 
 }
 
 // ---------------------------------------------------------------------------
@@ -282,23 +287,22 @@ void HumanoidEstimatorNode::flushReadyEvents() {
 // ---------------------------------------------------------------------------
 
 void HumanoidEstimatorNode::handleOrderedEvent(LiveEvent event) {
-  if (!initialized_) {
+  if (!initialized_) { // Initialization
     startupBuffer_.push_back(event);
     if (event.type == LiveEvent::Type::kImu) {
-      if (tryInitializeBias(event.imu)) {
-        initializeFromStartupBuffer();
+      if (tryInitializeBias(event.imu)) { // bias initialized, can start processing events
+        initializeFromStartupBuffer(); 
       }
     }
     return;
   }
   dispatch(event);
 }
-
+// The initial IMU buffer is used to without being discarded. 
 void HumanoidEstimatorNode::initializeFromStartupBuffer() {
   initialized_     = true;
   have_held_imu_   = false;
-  RCLCPP_INFO(get_logger(), "[init] replaying %zu startup events",
-              startupBuffer_.size());
+  RCLCPP_INFO(get_logger(), "[init] replaying %zu startup events", startupBuffer_.size());
   for (const LiveEvent& ev : startupBuffer_) {
     dispatch(ev);
   }
@@ -308,9 +312,12 @@ void HumanoidEstimatorNode::initializeFromStartupBuffer() {
 void HumanoidEstimatorNode::dispatch(const LiveEvent& event) {
   if (event.type == LiveEvent::Type::kImu) {
     processImu(event.imu);
-  } else {
+  } 
+  else {
     processContact(event.contact);
   }
+
+  publishOdom(estimator_time_s_);
 }
 
 // ---------------------------------------------------------------------------
@@ -318,7 +325,7 @@ void HumanoidEstimatorNode::dispatch(const LiveEvent& event) {
 // ---------------------------------------------------------------------------
 
 void HumanoidEstimatorNode::processImu(const ImuSample& sample) {
-  if (!have_held_imu_) {
+  if (!have_held_imu_) { // Save th first IMU sample
     held_imu_             = sample;
     have_held_imu_        = true;
     estimator_time_s_     = sample.timestamp_s;
@@ -327,18 +334,15 @@ void HumanoidEstimatorNode::processImu(const ImuSample& sample) {
   }
 
   const double new_t = sample.timestamp_s;
-  if (new_t <= estimator_time_s_) {
-    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000,
-                         "[imu] not monotonic, skipping");
+  if (new_t <= estimator_time_s_) { // Skip old IMU samples
+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000, "[imu] not monotonic, skipping");
     return;
   }
 
   const double dt = new_t - estimator_time_s_;
-  if (dt < 0.5) predictHeld(dt);
+  if (dt < 0.5) predictHeld(dt); // If there is a big gap, skip prediction to avoid large jumps 
   estimator_time_s_ = new_t;
   held_imu_         = sample;
-
-  publishOdom(estimator_time_s_);
 
 }
 
@@ -347,15 +351,15 @@ void HumanoidEstimatorNode::processImu(const ImuSample& sample) {
 // ---------------------------------------------------------------------------
 
 void HumanoidEstimatorNode::processContact(const ContactEvent& event) {
-  if (!have_held_imu_ || disable_contact_) return;
-  if (!event.left_in_contact && !event.right_in_contact) return;
+  if (!have_held_imu_ || disable_contact_) return; // First IMU sample not yet received or contact updates disabled
+  if (!event.left_in_contact && !event.right_in_contact) return; // No contact, no update
 
-  const bool is_touchdown = event.left_touchdown || event.right_touchdown;
-  const bool periodic_due = (max_dead_reckoning_s_ > 0.0) &&
+  const bool is_touchdown = event.left_touchdown || event.right_touchdown; // Touchdown update
+  const bool periodic_due = (max_dead_reckoning_s_ > 0.0) &&               // More than max_dead_reckoning_s_ has passsed since the last update
                             (event.timestamp_s - last_contact_update_s_ >=
                              max_dead_reckoning_s_ - 1e-12);
 
-  if (!is_touchdown && !periodic_due) return;
+  if (!is_touchdown && !periodic_due) return; // Not a touchdown and periodic update not due, skip to avoid excessive updates during long stances
 
   // Predict to the exact contact timestamp if it's ahead of estimator time.
   if (event.timestamp_s > estimator_time_s_ + 1e-9) {
@@ -419,7 +423,7 @@ void HumanoidEstimatorNode::runContactUpdate(double now, bool left_td, bool righ
 
   std::vector<gtsam::ContactMeasurement> contacts;
   Eigen::VectorXd q(6);
-  gtsam::Vector3 left_body_fp  = gtsam::Vector3::Zero();
+  gtsam::Vector3 left_body_fp = gtsam::Vector3::Zero();
   gtsam::Vector3 right_body_fp = gtsam::Vector3::Zero();
   bool left_fk_ok  = false;
   bool right_fk_ok = false;
@@ -427,14 +431,14 @@ void HumanoidEstimatorNode::runContactUpdate(double now, bool left_td, bool righ
   if (left_c && extractLegJoints(*joint_snap, true, q)) {
     const Eigen::Vector3d fp = fk_provider_->footPosition(q, true);
     left_body_fp = {fp.x(), fp.y(), fp.z()};
-    left_fk_ok   = true;
+    left_fk_ok = true;
     RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 2000, "[contact] left  body_pt=[%.3f %.3f %.3f] td=%d", fp.x(), fp.y(), fp.z(), left_td);
     contacts.push_back({0, left_body_fp, left_td});
   }
   if (right_c && extractLegJoints(*joint_snap, false, q)) {
     const Eigen::Vector3d fp = fk_provider_->footPosition(q, false);
     right_body_fp = {fp.x(), fp.y(), fp.z()};
-    right_fk_ok   = true;
+    right_fk_ok = true;
     RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 2000, "[contact] right body_pt=[%.3f %.3f %.3f] td=%d", fp.x(), fp.y(), fp.z(), right_td);
     contacts.push_back({1, right_body_fp, right_td});
   }
@@ -529,8 +533,7 @@ bool HumanoidEstimatorNode::tryInitializeBias(const ImuSample& s) {
   ++bias_sample_count_;
 
   if (bias_sample_count_ % 100 == 0) {
-    RCLCPP_INFO(get_logger(), "[bias] collecting... %d/%d",
-                bias_sample_count_, kBiasSamples);
+    RCLCPP_INFO(get_logger(), "[bias] collecting... %d/%d", bias_sample_count_, kBiasSamples);
   }
   if (bias_sample_count_ < kBiasSamples) return false;
 
@@ -625,8 +628,7 @@ bool HumanoidEstimatorNode::extractLegJoints(const JointMsg& msg,
                                               Eigen::VectorXd& pos) const {
   const std::vector<int>& idx = left ? left_joint_idx_ : right_joint_idx_;
   for (int i = 0; i < 6; ++i) {
-    if (idx[i] < 0 ||
-        static_cast<size_t>(idx[i]) >= msg.position.size()) {
+    if (idx[i] < 0 || static_cast<size_t>(idx[i]) >= msg.position.size()) {
       return false;
     }
     pos[i] = msg.position[idx[i]];
