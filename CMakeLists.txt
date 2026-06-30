@@ -6,6 +6,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -159,6 +160,13 @@ install(TARGETS contact_data_collector fk_visualizer humanoid_state_estimator
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# Python inference node
+install(PROGRAMS
+  scripts/contact_estimator_node.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME contact_estimator_node
+)
+
 install(DIRECTORY include/
   DESTINATION include
 )
@@ -177,6 +185,10 @@ install(DIRECTORY config/
 
 install(DIRECTORY rviz/
   DESTINATION share/${PROJECT_NAME}
+)
+
+install(DIRECTORY model/
+  DESTINATION share/${PROJECT_NAME}/model
 )
 
 if(BUILD_TESTING)

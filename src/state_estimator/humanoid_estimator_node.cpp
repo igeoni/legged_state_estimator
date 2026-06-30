@@ -625,9 +625,7 @@ void HumanoidEstimatorNode::buildJointIndexMap(const JointMsg& msg) {
   }
 }
 
-bool HumanoidEstimatorNode::extractLegJoints(const JointMsg& msg,
-                                              bool left,
-                                              Eigen::VectorXd& pos) const {
+bool HumanoidEstimatorNode::extractLegJoints(const JointMsg& msg, bool left, Eigen::VectorXd& pos) const {
   const std::vector<int>& idx = left ? left_joint_idx_ : right_joint_idx_;
   for (int i = 0; i < 6; ++i) {
     if (idx[i] < 0 || static_cast<size_t>(idx[i]) >= msg.position.size()) {

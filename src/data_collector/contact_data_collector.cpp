@@ -18,7 +18,7 @@ ContactDataCollector::ContactDataCollector(const rclcpp::NodeOptions& options)
 
   const std::string urdf_path = declare_parameter<std::string>("urdf_path", "");
   output_dir_          = declare_parameter<std::string>("output_dir",         "./dataset");
-  max_samples_         = declare_parameter<int>("max_samples",                10000);
+  max_samples_         = declare_parameter<int>("max_samples",                50000);
   time_slop_ns_        = declare_parameter<int>("time_slop_ns",               50'000'000);
   contact_threshold_n_ = declare_parameter<double>("contact_threshold_n",     10.0);
 
@@ -32,10 +32,15 @@ ContactDataCollector::ContactDataCollector(const rclcpp::NodeOptions& options)
 
   buffer_ = std::make_unique<DataBuffer>(output_dir_);
 
-  imu_sub_ = create_subscription<ImuMsg>("/imu", 100, std::bind(&ContactDataCollector::imuCallback, this, std::placeholders::_1));
-  joint_sub_ = create_subscription<JointMsg>("/joint_states", 100, std::bind(&ContactDataCollector::jointCallback, this, std::placeholders::_1));
-  left_contact_sub_ = create_subscription<WrenchMsg>("/contact/left_foot", 100, std::bind(&ContactDataCollector::leftContactCallback, this, std::placeholders::_1));
-  right_contact_sub_ = create_subscription<WrenchMsg>("/contact/right_foot", 100, std::bind(&ContactDataCollector::rightContactCallback, this, std::placeholders::_1));
+  const std::string topic_imu           = declare_parameter<std::string>("topic.imu",           "/imu");
+  const std::string topic_joint         = declare_parameter<std::string>("topic.joint_states",   "/joint_states");
+  const std::string topic_contact_left  = declare_parameter<std::string>("topic.contact_left",   "/contact/left_foot");
+  const std::string topic_contact_right = declare_parameter<std::string>("topic.contact_right",  "/contact/right_foot");
+
+  imu_sub_           = create_subscription<ImuMsg>(topic_imu,           rclcpp::SensorDataQoS(), std::bind(&ContactDataCollector::imuCallback,          this, std::placeholders::_1));
+  joint_sub_         = create_subscription<JointMsg>(topic_joint,        rclcpp::SensorDataQoS(), std::bind(&ContactDataCollector::jointCallback,         this, std::placeholders::_1));
+  left_contact_sub_  = create_subscription<WrenchMsg>(topic_contact_left,  rclcpp::SensorDataQoS(), std::bind(&ContactDataCollector::leftContactCallback,  this, std::placeholders::_1));
+  right_contact_sub_ = create_subscription<WrenchMsg>(topic_contact_right, rclcpp::SensorDataQoS(), std::bind(&ContactDataCollector::rightContactCallback, this, std::placeholders::_1));
 
   RCLCPP_INFO(get_logger(),
               "ContactDataCollector started.\n"
