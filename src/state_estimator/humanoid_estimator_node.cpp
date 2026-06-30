@@ -43,17 +43,20 @@ HumanoidEstimatorNode::HumanoidEstimatorNode(const rclcpp::NodeOptions& options)
   disable_contact_              = declare_parameter<bool>("disable_contact", false);
   zero_accel_debug_             = declare_parameter<bool>("zero_accel_debug", false);
   zero_gyro_debug_              = declare_parameter<bool>("zero_gyro_debug", false);
+  contact_estimator_            = declare_parameter<bool>("contact_estimator", false);
   world_frame_                  = declare_parameter<std::string>("world_frame", "odom");
   base_frame_                   = declare_parameter<std::string>("base_frame",  "pelvis");
-
-  const std::string topic_imu           = declare_parameter<std::string>("topic.imu",                "/imu");
-  const std::string topic_joint         = declare_parameter<std::string>("topic.joint_states",       "/joint_states");
-  const std::string topic_contact_left  = declare_parameter<std::string>("topic.contact_left",       "/contact/left_foot");
-  const std::string topic_contact_right = declare_parameter<std::string>("topic.contact_right",      "/contact/right_foot");
-  const std::string topic_odom          = declare_parameter<std::string>("topic.odom",               "/state_estimator/odom");
-  const std::string topic_description   = declare_parameter<std::string>("topic.robot_description",  "/description");
-  const std::string topic_path          = declare_parameter<std::string>("topic.path",               "/state_estimator/path");
-  const std::string topic_foot_contacts = declare_parameter<std::string>("topic.foot_contacts",      "/state_estimator/foot_contacts");
+  
+  const std::string topic_imu                     = declare_parameter<std::string>("topic.imu",                    "/imu");
+  const std::string topic_joint                   = declare_parameter<std::string>("topic.joint_states",           "/joint_states");
+  const std::string topic_contact_left            = declare_parameter<std::string>("topic.contact_left",           "/contact/left_foot");
+  const std::string topic_contact_right           = declare_parameter<std::string>("topic.contact_right",          "/contact/right_foot");
+  const std::string topic_contact_estimator_left  = declare_parameter<std::string>("topic.contact_estimator_left", "/contact_estimator/left_foot");
+  const std::string topic_contact_estimator_right = declare_parameter<std::string>("topic.contact_estimator_right","/contact_estimator/right_foot");
+  const std::string topic_odom                    = declare_parameter<std::string>("topic.odom",                   "/state_estimator/odom");
+  const std::string topic_description             = declare_parameter<std::string>("topic.robot_description",      "/description");
+  const std::string topic_path                    = declare_parameter<std::string>("topic.path",                   "/state_estimator/path");
+  const std::string topic_foot_contacts           = declare_parameter<std::string>("topic.foot_contacts",          "/state_estimator/foot_contacts");
 
   if (urdf_path.empty()) {
     RCLCPP_FATAL(get_logger(), "Parameter 'urdf_path' is required.");
@@ -75,8 +78,13 @@ HumanoidEstimatorNode::HumanoidEstimatorNode(const rclcpp::NodeOptions& options)
 
   imu_sub_           = create_subscription<ImuMsg>(topic_imu, rclcpp::SensorDataQoS(), [this](const ImuMsg::ConstSharedPtr& m) { imuCallback(m); });
   joint_sub_         = create_subscription<JointMsg>(topic_joint, rclcpp::SensorDataQoS(), [this](const JointMsg::ConstSharedPtr& m) { jointCallback(m); });
+  // MuJoCo Simulation True contact information
   left_contact_sub_  = create_subscription<WrenchMsg>(topic_contact_left, rclcpp::SensorDataQoS(), [this](const WrenchMsg::ConstSharedPtr& m) { leftContactCallback(m); });
   right_contact_sub_ = create_subscription<WrenchMsg>(topic_contact_right, rclcpp::SensorDataQoS(), [this](const WrenchMsg::ConstSharedPtr& m) { rightContactCallback(m); });
+  // CNN contact estimator
+  left_contact_estimator_sub_ = create_subscription<WrenchMsg>(topic_contact_estimator_left, rclcpp::SensorDataQoS(), [this](const WrenchMsg::ConstSharedPtr& m) {leftContactEstimatorCallback(m); });
+  right_contact_estimator_sub_ = create_subscription<WrenchMsg>(topic_contact_estimator_right, rclcpp::SensorDataQoS(), [this](const WrenchMsg::ConstSharedPtr& m) {rightContactEstimatorCallback(m); });
+
 
   odom_pub_              = create_publisher<OdomMsg>(topic_odom, 10);
   robot_description_pub_ = create_publisher<StringMsg>(topic_description, rclcpp::QoS(1).transient_local());
@@ -207,6 +215,8 @@ void HumanoidEstimatorNode::jointCallback(const JointMsg::ConstSharedPtr& msg) {
 }
 
 void HumanoidEstimatorNode::leftContactCallback(const WrenchMsg::ConstSharedPtr& msg) {
+  if (contact_estimator_) return; // Ignore MuJoCo contact if CNN contact estimator is enabled
+
   const bool in_contact = msg->wrench.force.z > contact_force_threshold_;
   LiveEvent event;
   event.type = LiveEvent::Type::kContact;
@@ -224,6 +234,8 @@ void HumanoidEstimatorNode::leftContactCallback(const WrenchMsg::ConstSharedPtr&
 }
 
 void HumanoidEstimatorNode::rightContactCallback(const WrenchMsg::ConstSharedPtr& msg) {
+  if (contact_estimator_) return; // Ignore MuJoCo contact if CNN contact estimator is enabled
+
   const bool in_contact = msg->wrench.force.z > contact_force_threshold_;
   LiveEvent event;
   event.type = LiveEvent::Type::kContact;
@@ -239,6 +251,45 @@ void HumanoidEstimatorNode::rightContactCallback(const WrenchMsg::ConstSharedPtr
   event.contact.left_touchdown = false;
   enqueueEvent(std::move(event));
 }
+
+void HumanoidEstimatorNode::leftContactEstimatorCallback(const WrenchMsg::ConstSharedPtr& msg) {
+  if (!contact_estimator_) return; // Ignore CNN contact if MuJoCo contact estimator is enabled
+
+  const bool in_contact = msg->wrench.force.z >= 1.0;
+  LiveEvent event;
+  event.type = LiveEvent::Type::kContact;
+  event.timestampS = rclcpp::Time(msg->header.stamp).seconds();
+  {
+    std::lock_guard<std::mutex> lk(sensor_mutex_);
+    event.contact.left_touchdown = in_contact && !left_in_contact_;
+    left_in_contact_ = in_contact;
+    event.contact.left_in_contact = in_contact;
+    event.contact.right_in_contact = right_in_contact_;
+  }
+  event.contact.timestamp_s = event.timestampS;
+  event.contact.right_touchdown = false;
+  enqueueEvent(std::move(event));
+}
+
+void HumanoidEstimatorNode::rightContactEstimatorCallback(const WrenchMsg::ConstSharedPtr& msg) {
+  if (!contact_estimator_) return; // Ignore CNN contact if MuJoCo contact estimator is enabled
+
+  const bool in_contact = msg->wrench.force.z >= 1.0;
+  LiveEvent event;
+  event.type = LiveEvent::Type::kContact;
+  event.timestampS = rclcpp::Time(msg->header.stamp).seconds();
+  {
+    std::lock_guard<std::mutex> lk(sensor_mutex_);
+    event.contact.right_touchdown = in_contact && !right_in_contact_;
+    right_in_contact_ = in_contact;
+    event.contact.left_in_contact = left_in_contact_;
+    event.contact.right_in_contact = in_contact;
+  }
+  event.contact.timestamp_s = event.timestampS;
+  event.contact.left_touchdown = false;
+  enqueueEvent(std::move(event));
+}
+
 
 // ---------------------------------------------------------------------------
 // enqueueEvent — called from any callback thread

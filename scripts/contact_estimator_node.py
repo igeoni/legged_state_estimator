@@ -12,7 +12,8 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Imu, JointState
-from std_msgs.msg import Int32, Bool
+from std_msgs.msg import Int32
+from geometry_msgs.msg import WrenchStamped
 
 WINDOW_SIZE = 150
 FEATURE_DIM = 42
@@ -94,8 +95,8 @@ class ContactEstimatorNode(Node):
         self.declare_parameter('topic.imu',           '/imu')
         self.declare_parameter('topic.joint_states',  '/joint_states')
         self.declare_parameter('topic.contact_label', '/contact_estimator/label')
-        self.declare_parameter('topic.left_contact',  '/contact_estimator/left_contact')
-        self.declare_parameter('topic.right_contact', '/contact_estimator/right_contact')
+        self.declare_parameter('topic.left_contact',  '/contact_estimator/left_foot')
+        self.declare_parameter('topic.right_contact', '/contact_estimator/right_foot')
 
         model_path   = self.get_parameter('model_path').value
         urdf_path    = self.get_parameter('urdf_path').value
@@ -138,9 +139,9 @@ class ContactEstimatorNode(Node):
         self.create_subscription(JointState, self.get_parameter('topic.joint_states').value, self._joint_cb, qos_profile_sensor_data)
 
         # --- Publishers ---
-        self._label_pub = self.create_publisher(Int32, self.get_parameter('topic.contact_label').value, 10)
-        self._left_pub  = self.create_publisher(Bool, self.get_parameter('topic.left_contact').value, 10)
-        self._right_pub = self.create_publisher(Bool, self.get_parameter('topic.right_contact').value, 10)
+        self._label_pub = self.create_publisher(Int32,         self.get_parameter('topic.contact_label').value, 10)
+        self._left_pub  = self.create_publisher(WrenchStamped, self.get_parameter('topic.left_contact').value,  10)
+        self._right_pub = self.create_publisher(WrenchStamped, self.get_parameter('topic.right_contact').value, 10)
 
         self.get_logger().info(
             f'ContactEstimatorNode ready  '
@@ -269,9 +270,20 @@ class ContactEstimatorNode(Node):
 
         left_contact, right_contact = decode_label(label)
 
-        label_msg       = Int32();  label_msg.data = label
-        left_msg        = Bool();   left_msg.data  = left_contact
-        right_msg       = Bool();   right_msg.data = right_contact
+        stamp = self.get_clock().now().to_msg()
+
+        label_msg      = Int32()
+        label_msg.data = label
+
+        left_msg                    = WrenchStamped()
+        left_msg.header.stamp       = stamp
+        left_msg.header.frame_id    = 'left_ankle_roll_link'
+        left_msg.wrench.force.z     = 1.0 if left_contact  else 0.0
+
+        right_msg                   = WrenchStamped()
+        right_msg.header.stamp      = stamp
+        right_msg.header.frame_id   = 'right_ankle_roll_link'
+        right_msg.wrench.force.z    = 1.0 if right_contact else 0.0
 
         self._label_pub.publish(label_msg)
         self._left_pub.publish(left_msg)

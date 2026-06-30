@@ -31,6 +31,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
+#include <std_msgs/msg/bool.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/wrench_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -57,6 +58,7 @@ class HumanoidEstimatorNode : public rclcpp::Node {
   using WrenchMsg = geometry_msgs::msg::WrenchStamped;
   using OdomMsg   = nav_msgs::msg::Odometry;
   using StringMsg = std_msgs::msg::String;
+  using BoolMsg   = std_msgs::msg::Bool;
 
   struct ImuSample {
     double timestamp_s = 0.0;
@@ -100,8 +102,12 @@ class HumanoidEstimatorNode : public rclcpp::Node {
   // Sensor callbacks (buffer only, never call estimator) 
   void imuCallback(const ImuMsg::ConstSharedPtr& msg);
   void jointCallback(const JointMsg::ConstSharedPtr& msg);
+  // MuJoCo Simulation True contact information
   void leftContactCallback(const WrenchMsg::ConstSharedPtr& msg);
   void rightContactCallback(const WrenchMsg::ConstSharedPtr& msg);
+  // CNN contact estimator
+  void leftContactEstimatorCallback(const WrenchMsg::ConstSharedPtr& msg);
+  void rightContactEstimatorCallback(const WrenchMsg::ConstSharedPtr& msg);
 
   // Event queue (timer-driven, reorder-delay flush) 
   void enqueueEvent(LiveEvent event);
@@ -134,8 +140,12 @@ class HumanoidEstimatorNode : public rclcpp::Node {
   // ROS Subscribers & Publishers 
   rclcpp::Subscription<ImuMsg>::SharedPtr    imu_sub_;
   rclcpp::Subscription<JointMsg>::SharedPtr  joint_sub_;
+  // MuJoCo Simulation True contact information
   rclcpp::Subscription<WrenchMsg>::SharedPtr left_contact_sub_;
   rclcpp::Subscription<WrenchMsg>::SharedPtr right_contact_sub_;
+  // CNN contact estimator 
+  rclcpp::Subscription<WrenchMsg>::SharedPtr left_contact_estimator_sub_;
+  rclcpp::Subscription<WrenchMsg>::SharedPtr right_contact_estimator_sub_;
 
   rclcpp::Publisher<OdomMsg>::SharedPtr    odom_pub_;
   rclcpp::Publisher<StringMsg>::SharedPtr  robot_description_pub_;
@@ -211,6 +221,7 @@ class HumanoidEstimatorNode : public rclcpp::Node {
   bool   disable_contact_       = false;
   bool   zero_accel_debug_      = false;
   bool   zero_gyro_debug_       = false;
+  bool   contact_estimator_     = false;
 
   std::chrono::steady_clock::time_point start_time_;
   
