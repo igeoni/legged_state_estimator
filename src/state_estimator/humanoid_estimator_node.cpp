@@ -235,7 +235,7 @@ void HumanoidEstimatorNode::leftContactCallback(const WrenchMsg::ConstSharedPtr&
 
 void HumanoidEstimatorNode::rightContactCallback(const WrenchMsg::ConstSharedPtr& msg) {
   if (contact_estimator_) return; // Ignore MuJoCo contact if CNN contact estimator is enabled
-
+  
   const bool in_contact = msg->wrench.force.z > contact_force_threshold_;
   LiveEvent event;
   event.type = LiveEvent::Type::kContact;
@@ -255,7 +255,7 @@ void HumanoidEstimatorNode::rightContactCallback(const WrenchMsg::ConstSharedPtr
 void HumanoidEstimatorNode::leftContactEstimatorCallback(const WrenchMsg::ConstSharedPtr& msg) {
   if (!contact_estimator_) return; // Ignore CNN contact if MuJoCo contact estimator is enabled
 
-  const bool in_contact = msg->wrench.force.z >= 1.0;
+  const bool in_contact = msg->wrench.force.z >= 0.5;
   LiveEvent event;
   event.type = LiveEvent::Type::kContact;
   event.timestampS = rclcpp::Time(msg->header.stamp).seconds();
@@ -274,7 +274,7 @@ void HumanoidEstimatorNode::leftContactEstimatorCallback(const WrenchMsg::ConstS
 void HumanoidEstimatorNode::rightContactEstimatorCallback(const WrenchMsg::ConstSharedPtr& msg) {
   if (!contact_estimator_) return; // Ignore CNN contact if MuJoCo contact estimator is enabled
 
-  const bool in_contact = msg->wrench.force.z >= 1.0;
+  const bool in_contact = msg->wrench.force.z >= 0.5;
   LiveEvent event;
   event.type = LiveEvent::Type::kContact;
   event.timestampS = rclcpp::Time(msg->header.stamp).seconds();

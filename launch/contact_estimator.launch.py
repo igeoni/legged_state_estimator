@@ -12,7 +12,7 @@ def generate_launch_description():
         pkg_share, 'description', 'urdf', 'g1_29dof_rev_1_0.urdf'
     ])
     default_model = PathJoinSubstitution([
-        pkg_share, 'model', 'results_h1_best_val_loss.pt'
+        pkg_share, 'model', 'results_260701_1924.pt'
     ])
 
     return LaunchDescription([

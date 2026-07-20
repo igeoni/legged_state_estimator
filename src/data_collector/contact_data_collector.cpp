@@ -111,8 +111,8 @@ void ContactDataCollector::tryProcess() {
     return;
   }
 
-  bool left_contact  = latest_left_contact_->wrench.force.z  > contact_threshold_n_;
-  bool right_contact = latest_right_contact_->wrench.force.z > contact_threshold_n_;
+  bool left_contact  = latest_left_contact_->wrench.force.z  > 0.5;
+  bool right_contact = latest_right_contact_->wrench.force.z > 0.5;
   int32_t label = encodeContact(left_contact, right_contact);
 
   Eigen::VectorXd q_left   = Eigen::Map<Eigen::VectorXd>(q_all.data(),      6);

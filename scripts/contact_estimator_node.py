@@ -260,7 +260,8 @@ class ContactEstimatorNode(Node):
         arr  = np.array(self._window, dtype=np.float32)          # (150, 42)
         mean = arr.mean(axis=0)
         std  = arr.std(axis=0)
-        std[std < 1e-8] = 1.0                                    # avoid div-by-zero for constant features
+        # std[std < 1e-8] = 1.0                                    # avoid div-by-zero for constant features
+        std  = np.maximum(std, 0.1)
         arr  = (arr - mean) / std
         x    = torch.from_numpy(arr).unsqueeze(0).to(self._device)  # (1, 150, 42)
 
