@@ -1,1 +1,8 @@
 *.pt
+
+# 
+/include/legged_state_estimator/data_collector/
+/src/data_collector/
+/launch/contact_data_collector.launch.py
+/launch/contact_estimator.launch.py 
+

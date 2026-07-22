@@ -13,7 +13,7 @@ humanoid_state_estimator:
     world_frame: "odom"             # world frame for state estimation
     base_frame: "pelvis"            # base frame for state estimation
     qos.reorder_delay_seconds: 0.02 # reorder delay for sensor messages to ensure correct temporal ordering (especially for IMU)
-    contact_estimator: true        # use CNN contact estimator
+    contact_estimator: false        # use CNN contact estimator
 
     # topic names
     topic.imu:                     "/imu"                           # imu ImuMsg

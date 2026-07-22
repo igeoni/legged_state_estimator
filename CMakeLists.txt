@@ -28,49 +28,49 @@ find_package(GTSAM REQUIRED HINTS /usr/local/lib/cmake)
 # contact_collector_lib (shared between collector executable and tests)
 # ---------------------------------------------------------------------------
 
-set(CONTACT_COLLECTOR_SOURCES
-  src/kinematics/g1_kinematics.cpp
-  src/data_collector/npy_writer.cpp
-  src/data_collector/data_buffer.cpp
-  src/data_collector/contact_data_collector.cpp
-)
+# set(CONTACT_COLLECTOR_SOURCES
+#   src/kinematics/g1_kinematics.cpp
+#   src/data_collector/npy_writer.cpp
+#   src/data_collector/data_buffer.cpp
+#   src/data_collector/contact_data_collector.cpp
+# )
 
-add_library(contact_collector_lib STATIC ${CONTACT_COLLECTOR_SOURCES})
+# add_library(contact_collector_lib STATIC ${CONTACT_COLLECTOR_SOURCES})
 
-target_include_directories(contact_collector_lib PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
-)
+# target_include_directories(contact_collector_lib PUBLIC
+#   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+#   $<INSTALL_INTERFACE:include>
+# )
 
-ament_target_dependencies(contact_collector_lib
-  rclcpp
-  std_msgs
-  sensor_msgs
-  geometry_msgs
-  Eigen3
-)
+# ament_target_dependencies(contact_collector_lib
+#   rclcpp
+#   std_msgs
+#   sensor_msgs
+#   geometry_msgs
+#   Eigen3
+# )
 
-target_link_libraries(contact_collector_lib
-  pinocchio::pinocchio
-)
+# target_link_libraries(contact_collector_lib
+#   pinocchio::pinocchio
+# )
 
 # ---------------------------------------------------------------------------
 # contact_data_collector executable
 # ---------------------------------------------------------------------------
 
-add_executable(contact_data_collector
-  src/data_collector/contact_data_collector_main.cpp
-)
+# add_executable(contact_data_collector
+#   src/data_collector/contact_data_collector_main.cpp
+# )
 
-target_link_libraries(contact_data_collector contact_collector_lib)
+# target_link_libraries(contact_data_collector contact_collector_lib)
 
-ament_target_dependencies(contact_data_collector
-  rclcpp
-  std_msgs
-  sensor_msgs
-  geometry_msgs
-  Eigen3
-)
+# ament_target_dependencies(contact_data_collector
+#   rclcpp
+#   std_msgs
+#   sensor_msgs
+#   geometry_msgs
+#   Eigen3
+# )
 
 # ---------------------------------------------------------------------------
 # fk_visualizer executable
@@ -154,8 +154,9 @@ target_link_libraries(humanoid_state_estimator
 )
 
 # ---------------------------------------------------------------------------
+# contact_data_collector
 
-install(TARGETS contact_data_collector fk_visualizer humanoid_state_estimator
+install(TARGETS fk_visualizer humanoid_state_estimator
         humanoid_fk_lib humanoid_est_lib
   DESTINATION lib/${PROJECT_NAME}
 )
