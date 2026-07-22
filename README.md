@@ -12,6 +12,13 @@ https://github.com/user-attachments/assets/8c50932e-77e3-4db2-8c14-0e8db6635fda
 
 ## Dependencies
 
+### Pinocchio
+
+```bash
+sudo apt update
+sudo apt install ros-humble-pinocchio
+```
+
 ### GTSAM (local install)
 
 ```bash
